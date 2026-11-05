@@ -21,7 +21,7 @@ main{max-width:520px;margin:auto;padding:12px}
 .warn{color:var(--peak)}
 #glance.compact{padding:10px 14px}#glance.compact #state{font-size:22px}#glance.compact #count{font-size:14px;margin:3px 0 0}
 #glance.compact #sub,#glance.compact .pr,#glance.compact .ft{display:none}.bar button{font-size:12px}
-#glance{position:relative;padding-bottom:40px}#glance.compact{min-height:88px}
+#glance{position:relative;padding-bottom:40px}#glance.compact{min-height:88px;display:flex;flex-direction:column;justify-content:center}
 .ic{position:absolute;background:none;border:0;color:var(--m);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .ic:hover{background:var(--bg);color:var(--text)}.ic[hidden]{display:none}
 .tl{position:absolute;top:8px;right:8px;display:flex;gap:2px}.tl .ic{position:static}.bl{right:8px;bottom:8px}
@@ -71,12 +71,12 @@ function isPeak(d){const p=S.peak,w=d.getUTCDay(),h=d.getUTCHours();
   return p.windowsUtc.some(([a,b])=>h>=a&&h<b)}
 function nextChange(now){const cur=isPeak(now);let t=Math.floor(now/36e5)*36e5+36e5;
   for(let i=0;i<24*40;i++,t+=36e5)if(isPeak(new Date(t))!==cur)return t;return null}
-const dur=ms=>{const m=Math.max(0,Math.round(ms/6e4)),h=Math.floor(m/60);return h>=24?Math.floor(h/24)+'d '+h%24+'h':h+'h '+pad(m%60)+'m'};
+const dur=ms=>{const m=Math.max(1,Math.ceil(ms/6e4)),h=Math.floor(m/60);return h>=24?Math.floor(h/24)+'d '+(h%24)+'h':h>0?h+'h '+pad(m%60)+'m':m+'m'};
 const nbo=(t,day)=>new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Nairobi',hour:'2-digit',minute:'2-digit',hour12:false,...(day?{weekday:'short'}:{})}).format(t);
 const fmt=n=>n>=100?n.toFixed(0):n>=10?n.toFixed(1):n.toFixed(2);
 const money=u=>S.fx&&S.fx.rate?'KES '+fmt(u*S.fx.rate):'$'+u;
 const cur=()=>S.models.find(m=>m.id===ls('dsModel'))||S.models[0];
-
+ 
 function render(){
   const now=new Date(),p=isPeak(now),n=nextChange(now),m=cur(),t=p?'peak':'offPeak';
   E.glance.className=(p?'peak':'off')+(compact?' compact':'');E.more.hidden=compact;setIc(E.mode,compact?IC.expand:IC.min,compact?'Expand':'Minimize');E.state.textContent=p?'PEAK':'OFF-PEAK';
@@ -128,3 +128,4 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch((
 sz();
 load();setInterval(render,15000);setInterval(load,6*36e5);
 </script></body></html>
+ 
