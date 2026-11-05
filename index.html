@@ -3,9 +3,10 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DeepSeek Peak Tracker</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><meta name="theme-color" content="#141412">
+<script>try{document.documentElement.dataset.theme=localStorage.dsTheme||"light"}catch{}</script>
 <style>
-:root{--bg:#f6f5f1;--card:#fff;--text:#1b1b18;--m:#6b6a63;--line:#e3e1d8;--peak:#d9482b;--off:#1f8a5b;--offbg:#dff1e8;--acc:#2b59c3;color-scheme:light dark}
-@media(prefers-color-scheme:dark){:root{--bg:#141412;--card:#1e1e1b;--text:#f0efe8;--m:#9a988d;--line:#34332e;--peak:#ff7a5c;--off:#4fd194;--offbg:#16301f;--acc:#7ea2ff}}
+:root{--bg:#f6f5f1;--card:#fff;--text:#1b1b18;--m:#6b6a63;--line:#e3e1d8;--peak:#d9482b;--off:#1f8a5b;--offbg:#dff1e8;--acc:#2b59c3;color-scheme:light}
+:root[data-theme=dark]{--bg:#141412;--card:#1e1e1b;--text:#f0efe8;--m:#9a988d;--line:#34332e;--peak:#ff7a5c;--off:#4fd194;--offbg:#16301f;--acc:#7ea2ff;color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,"Segoe UI",sans-serif}
 main{max-width:520px;margin:auto;padding:12px}
 #glance{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -18,6 +19,12 @@ main{max-width:520px;margin:auto;padding:12px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{background:none;border:0;color:var(--m);padding:4px 10px;font-size:12px;cursor:pointer}.seg button.on{background:var(--acc);color:#fff}
 .warn{color:var(--peak)}
+#glance.compact{padding:10px 14px}#glance.compact #state{font-size:22px}#glance.compact #count{font-size:14px;margin:3px 0 0}
+#glance.compact #sub,#glance.compact .pr,#glance.compact .ft{display:none}.bar button{font-size:12px}
+#glance{position:relative;padding-bottom:40px}#glance.compact{min-height:88px}
+.ic{position:absolute;background:none;border:0;color:var(--m);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.ic:hover{background:var(--bg);color:var(--text)}.ic[hidden]{display:none}
+.tl{position:absolute;top:8px;right:8px;display:flex;gap:2px}.tl .ic{position:static}.bl{right:8px;bottom:8px}
 .bar{display:flex;gap:8px;margin:10px 0}.bar button,.card button.l{flex:1;padding:8px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;cursor:pointer}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
 h2{font-size:13px;margin:0 0 8px}
@@ -28,13 +35,14 @@ table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}td,t
 .stats{display:flex;gap:8px;margin:8px 0}.stats div{flex:1;text-align:center;border-radius:8px;padding:6px;background:var(--bg)}.stats b{display:block;font-size:18px}
 li{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--line);list-style:none}ul{margin:0;padding:0}
 </style></head><body>
-<main>
+<main id="mainEl">
 <section id="glance" class="off">
+  <div class="tl"><button class="ic" id="more"></button><button class="ic" id="theme"></button><button class="ic" id="mode"></button></div>
   <div id="state">…</div><div id="sub" class="m"></div><div id="count"></div>
   <div class="pr"><div><small>Input / 1M tokens</small><b id="pin">–</b></div><div><small>Output / 1M tokens</small><b id="pout">–</b></div></div>
   <div class="ft"><div class="seg" id="mdl"></div><span id="fresh" class="m"></span></div>
+  <button class="ic bl" id="float" hidden></button>
 </section>
-<div class="bar" id="bar"><button id="more">Details</button><button id="float" hidden>Float on top</button></div>
 <div id="details" hidden>
   <div class="card"><div style="display:flex;justify-content:space-between"><h2>Next 7 days</h2>
     <div class="seg" id="tz"><button data-o="3" class="on">Nairobi</button><button data-o="0">UTC</button></div></div>
@@ -47,9 +55,14 @@ li{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid
 </main>
 <script>
 const E={};document.querySelectorAll('[id]').forEach(e=>E[e.id]=e);
+const svg=p=>'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+const IC={moon:svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),sun:svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),expand:svg('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),min:svg('<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>'),list:svg('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),pip:svg('<path d="M21 9V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><rect x="12" y="13" width="10" height="7" rx="2"/>')};
+const setIc=(b,i,t)=>{b.innerHTML=i;b.title=t;b.setAttribute('aria-label',t)};
+setIc(E.more,IC.list,'Details');setIc(E.float,IC.pip,'Float on top (click again to close)');
 const DEF={peak:{weekdays:[1,2,3,4,5],windowsUtc:[[1,4],[6,10]],excludeChineseHolidays:true},holidays:[],fx:{rate:null},models:[]};
 let S=DEF,off=3;
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch{return null}};
+let compact=ls('dsMode')!=='full',pipWin=null;
 const iso=d=>d.toISOString().slice(0,10),pad=n=>String(n).padStart(2,'0');
 const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function isPeak(d){const p=S.peak,w=d.getUTCDay(),h=d.getUTCHours();
@@ -66,7 +79,7 @@ const cur=()=>S.models.find(m=>m.id===ls('dsModel'))||S.models[0];
 
 function render(){
   const now=new Date(),p=isPeak(now),n=nextChange(now),m=cur(),t=p?'peak':'offPeak';
-  E.glance.className=p?'peak':'off';E.state.textContent=p?'PEAK':'OFF-PEAK';
+  E.glance.className=(p?'peak':'off')+(compact?' compact':'');E.more.hidden=compact;setIc(E.mode,compact?IC.expand:IC.min,compact?'Expand':'Minimize');E.state.textContent=p?'PEAK':'OFF-PEAK';
   const hol=S.peak.excludeChineseHolidays&&S.holidays.includes(iso(now));
   E.sub.textContent=p?'Double rate':hol?'China public holiday: off-peak all day':!S.peak.weekdays.includes(now.getUTCDay())?'Weekend: off-peak all day':'Standard rate';
   E.count.innerHTML=n?(p?'Off-peak':'Peak')+' in <b>'+dur(n-now)+'</b> · '+nbo(n,n-now>20*36e5)+' EAT':'';
@@ -95,17 +108,23 @@ function renderDetails(now,m){
   E.np.textContent=np;E.no.textContent=no;E.list.innerHTML='';
   log.slice(-5).reverse().forEach(e=>{const li=document.createElement('li');li.innerHTML='<span>'+nbo(e.t,true)+'</span><b style="color:var(--'+(e.p?'peak':'off')+')">'+(e.p?'Peak':'Off-peak')+'</b>';E.list.append(li)});
 }
-E.more.onclick=()=>{E.details.hidden=!E.details.hidden;E.more.textContent=E.details.hidden?'Details':'Hide details';render()};
+const sz=()=>{if(matchMedia('(display-mode: standalone)').matches)try{resizeTo(340,compact?172:520)}catch{}};
+function setMode(c){compact=c;ls('dsMode',c?'min':'full');if(c){E.details.hidden=true;E.more.title='Details'}sz();render()}
+E.mode.onclick=()=>setMode(!compact);
+const applyTheme=()=>{const t=ls('dsTheme')||'light';document.documentElement.dataset.theme=t;setIc(E.theme,t==='dark'?IC.sun:IC.moon,t==='dark'?'Switch to light mode':'Switch to dark mode');if(pipWin)try{pipWin.document.documentElement.dataset.theme=t}catch{}};
+E.theme.onclick=()=>{ls('dsTheme',(ls('dsTheme')||'light')==='dark'?'light':'dark');applyTheme()};
+applyTheme();
+E.more.onclick=()=>{E.details.hidden=!E.details.hidden;E.more.title=E.details.hidden?'Details':'Hide details';render()};
 E.tz.onclick=e=>{const b=e.target.closest('button');if(!b)return;off=+b.dataset.o;[...E.tz.children].forEach(x=>x.classList.toggle('on',x===b));render()};
 E.logBtn.onclick=()=>{const l=JSON.parse(ls('dsLog')||'[]');l.push({t:Date.now(),p:isPeak(new Date())});ls('dsLog',JSON.stringify(l));render()};
 E.clear.onclick=()=>{ls('dsLog','[]');render()};
 E.float.hidden=!window.documentPictureInPicture;
-E.float.onclick=async()=>{try{const w=await documentPictureInPicture.requestWindow({width:300,height:210});
+E.float.onclick=async()=>{if(pipWin){pipWin.close();return}try{const w=await documentPictureInPicture.requestWindow({width:300,height:compact?118:260});pipWin=w;w.document.documentElement.dataset.theme=ls('dsTheme')||'light';
   document.querySelectorAll('style').forEach(s=>w.document.head.append(s.cloneNode(true)));w.document.body.append(E.glance);
-  w.addEventListener('pagehide',()=>E.bar.before(E.glance))}catch{}};
+  w.addEventListener('pagehide',()=>{pipWin=null;E.mainEl.prepend(E.glance)})}catch{}};
 async function load(){try{const r=await fetch('data/schedule.json',{cache:'no-store'});if(!r.ok)throw 0;S=await r.json();if(!S.models)throw 0;ls('dsSched',JSON.stringify(S))}
   catch{try{S=JSON.parse(ls('dsSched'))||DEF}catch{S=DEF}}render()}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-if(matchMedia('(display-mode: standalone)').matches)try{resizeTo(340,520)}catch{}
+sz();
 load();setInterval(render,15000);setInterval(load,6*36e5);
 </script></body></html>
