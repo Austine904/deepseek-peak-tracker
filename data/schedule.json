@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-11-19T20:43:21.666Z",
+  "checkedAt": "2026-11-20T07:24:25.804Z",
   "source": "https://api-docs.deepseek.com/quick_start/pricing.md",
   "peak": {
     "weekdays": [
@@ -89,8 +89,8 @@
   "fx": {
     "base": "USD",
     "quote": "KES",
-    "rate": 129.9725,
-    "asOf": "2026-11-19",
+    "rate": 129.9839,
+    "asOf": "2026-11-20",
     "source": "open.er-api.com"
   },
   "models": [
